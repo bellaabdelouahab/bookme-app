@@ -1,7 +1,9 @@
 """
 Tenant admin interface.
 """
+from django.conf import settings
 from django.contrib import admin
+from django.utils.html import format_html
 
 from .models import Domain, Tenant, TenantConfig, TenantLifecycle
 
@@ -15,6 +17,7 @@ class TenantAdmin(admin.ModelAdmin):
         "status",
         "subscription_tier",
         "created_at",
+        "open_admin",
     ]
     list_filter = ["status", "subscription_tier", "created_at"]
     search_fields = ["name", "schema_name", "primary_domain", "contact_email"]
@@ -66,6 +69,30 @@ class TenantAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+    def open_admin(self, obj):
+        """
+        Renders a link to open the tenant's Django admin. Assumes tenant admin is at /admin/.
+        """
+        # Prefer explicit primary_domain; fallback to the first related Domain if available
+        domain = getattr(obj, "primary_domain", None)
+        if not domain:
+            try:
+                domain = obj.domains.filter(is_primary=True).first() or obj.domains.first()
+                domain = domain.domain if domain else None
+            except Exception:
+                domain = None
+
+        if not domain:
+            return "—"
+
+        # Determine protocol
+        use_https = not getattr(settings, "DEBUG", False)
+        proto = "https" if use_https else "http"
+        url = f"{proto}://{domain}/admin/"
+        return format_html('<a href="{}" target="_blank" rel="noopener">Open admin</a>', url)
+
+    open_admin.short_description = "Tenant Admin"
 
 
 @admin.register(Domain)

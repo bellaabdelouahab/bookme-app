@@ -1,7 +1,7 @@
 """
 Django settings for BookMe project.
 """
-import os
+from datetime import timedelta
 from pathlib import Path
 
 import environ
@@ -223,7 +223,6 @@ REST_FRAMEWORK = {
 }
 
 # JWT Settings
-from datetime import timedelta
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
@@ -243,6 +242,13 @@ SIMPLE_JWT = {
 # CORS
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
 CORS_ALLOW_CREDENTIALS = True
+
+# Optional: enable cross-subdomain session sharing for admin if you run all tenants on subdomains.
+# Example: base domain is bookme.ma and tenants are <slug>.bookme.ma
+# Uncomment and set COOKIE_DOMAIN in production if you want superadmin login to work across subdomains.
+# SESSION_COOKIE_DOMAIN = env("SESSION_COOKIE_DOMAIN", default=None)  # e.g. ".bookme.ma"
+# CSRF_COOKIE_DOMAIN = env("CSRF_COOKIE_DOMAIN", default=None)        # e.g. ".bookme.ma"
+# CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 # API Documentation
 SPECTACULAR_SETTINGS = {

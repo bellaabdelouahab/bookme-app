@@ -1,6 +1,7 @@
 """
 URL configuration for BookMe project (tenant-specific).
 """
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
@@ -21,3 +22,8 @@ urlpatterns = [
     path("api/v1/communications/", include("bookme.communications.urls")),
     path("api/v1/payments/", include("bookme.payments.urls")),
 ]
+
+if settings.DEBUG and "debug_toolbar" in settings.INSTALLED_APPS:
+    urlpatterns += [
+        path("__debug__/", include("debug_toolbar.urls")),
+    ]

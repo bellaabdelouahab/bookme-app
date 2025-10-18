@@ -20,3 +20,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# No changes required for super admin support.
+# Implement a public-schema superuser and either:
+# - shared users (one login for all tenants), or
+# - a public admin view that switches schema to manage tenant data.
