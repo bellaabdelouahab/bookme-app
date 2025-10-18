@@ -1,0 +1,274 @@
+@startuml
+
+package "Tenant Core" {
+  class Tenant {
+    +tenantId : UUID
+    +name : String
+    +schemaName : String
+    +primaryDomain : String
+    +status : TenantStatus
+    +createdAt : DateTime
+    +updatedAt : DateTime
+  }
+
+  class TenantConfig {
+    +configId : UUID
+    +tenantId : FK -> Tenant.tenantId
+    +key : String
+    +value : Json
+    +updatedAt : DateTime
+  }
+
+  note right of TenantConfig
+    Flexible key-value store for all tenant settings.
+    Can store: branding, locale, features, limits, etc.
+    Easy to extend without schema changes.
+  end note
+
+  Tenant "1" -- "0..*" TenantConfig
+}
+
+package "Services & Staff" {
+  class Service {
+    +serviceId : UUID
+    +tenantId : FK -> Tenant.tenantId
+    +name : Json
+    +description : Json
+    +price : Money
+    +duration : Int
+    +isActive : Boolean
+    +metadata : Json
+    +createdAt : DateTime
+  }
+
+  class Staff {
+    +staffId : UUID
+    +tenantId : FK -> Tenant.tenantId
+    +fullName : String
+    +email : Email
+    +phone : PhoneNumber
+    +isActive : Boolean
+    +metadata : Json
+    +createdAt : DateTime
+  }
+
+  class StaffService {
+    +id : UUID
+    +tenantId : FK -> Tenant.tenantId
+    +staffId : FK -> Staff.staffId
+    +serviceId : FK -> Service.serviceId
+    +overrides : Json
+  }
+
+  class Availability {
+    +availabilityId : UUID
+    +tenantId : FK -> Tenant.tenantId
+    +staffId : FK -> Staff.staffId
+    +type : AvailabilityType
+    +startTime : DateTime
+    +endTime : DateTime
+    +recurrence : Json?
+    +metadata : Json
+  }
+
+  note right of Availability
+    Flexible availability model:
+    - type: SCHEDULE, TIME_OFF, OVERRIDE
+    - recurrence: stores RRULE for repeating schedules
+    - Can extend to location-based, capacity, etc.
+  end note
+
+  Staff "1" -- "0..*" StaffService
+  Service "1" -- "0..*" StaffService
+  Staff "1" -- "0..*" Availability
+}
+
+package "Customers & Bookings" {
+  class Customer {
+    +customerId : UUID
+    +tenantId : FK -> Tenant.tenantId
+    +phone : PhoneNumber
+    +fullName : String
+    +email : Email?
+    +locale : Locale
+    +consent : Json
+    +metadata : Json
+    +createdAt : DateTime
+  }
+
+  class Booking {
+    +bookingId : UUID
+    +tenantId : FK -> Tenant.tenantId
+    +customerId : FK -> Customer.customerId
+    +staffId : FK -> Staff.staffId
+    +serviceId : FK -> Service.serviceId
+    +bookingRef : String
+    +startTime : DateTime
+    +endTime : DateTime
+    +status : BookingStatus
+    +channel : BookingChannel
+    +snapshot : Json
+    +metadata : Json
+    +createdAt : DateTime
+  }
+
+  note right of Booking
+    snapshot: stores service/price details at booking time
+    metadata: extensible field for custom data
+    (notes, tags, cancellation reason, etc.)
+  end note
+
+  class BookingEvent {
+    +eventId : UUID
+    +tenantId : FK -> Tenant.tenantId
+    +bookingId : FK -> Booking.bookingId
+    +eventType : EventType
+    +actor : Json
+    +payload : Json
+    +occurredAt : DateTime
+  }
+
+  note right of BookingEvent
+    Universal event log pattern:
+    - Audit trail
+    - State transitions
+    - Can evolve to event sourcing
+  end note
+
+  Customer "1" -- "0..*" Booking
+  Booking "1" -- "0..*" BookingEvent
+}
+
+package "Communications" {
+  class NotificationTemplate {
+    +templateId : UUID
+    +tenantId : FK -> Tenant.tenantId
+    +name : String
+    +channel : ChannelType
+    +content : Json
+    +isActive : Boolean
+  }
+
+  class Notification {
+    +notificationId : UUID
+    +tenantId : FK -> Tenant.tenantId
+    +recipientType : RecipientType
+    +recipientId : UUID
+    +channel : NotificationChannel
+    +templateId : FK -> NotificationTemplate.templateId?
+    +status : NotificationStatus
+    +payload : Json
+    +metadata : Json
+    +scheduledFor : DateTime?
+    +sentAt : DateTime?
+  }
+
+  note right of Notification
+    Unified notification model:
+    - recipientType: CUSTOMER, STAFF, TENANT_ADMIN
+    - payload: rendered content + provider details
+    - metadata: tracking, errors, delivery status
+    Easy to add new channels without schema changes
+  end note
+
+  NotificationTemplate "1" -- "0..*" Notification
+}
+
+package "Payments" {
+  class Transaction {
+    +transactionId : UUID
+    +tenantId : FK -> Tenant.tenantId
+    +bookingId : FK -> Booking.bookingId?
+    +customerId : FK -> Customer.customerId
+    +type : TransactionType
+    +amount : Money
+    +status : TransactionStatus
+    +method : PaymentMethod
+    +provider : Json
+    +metadata : Json
+    +createdAt : DateTime
+  }
+
+  note right of Transaction
+    Universal transaction model:
+    - type: PAYMENT, REFUND, DEPOSIT
+    - provider: stores gateway-specific data
+    - Can extend to invoicing, subscriptions
+  end note
+}
+
+package "Resources" {
+  class Resource {
+    +resourceId : UUID
+    +tenantId : FK -> Tenant.tenantId
+    +resourceType : ResourceType
+    +key : String
+    +content : Json
+    +locale : Locale?
+    +metadata : Json
+    +updatedAt : DateTime
+  }
+
+  note right of Resource
+    Generic resource store:
+    - type: TRANSLATION, MEDIA, TEMPLATE, CONFIG
+    - Replaces multiple specialized tables
+    - Easy to add new resource types
+  end note
+}
+
+package "Access Control" {
+  class User {
+    +userId : UUID
+    +email : Email
+    +passwordHash : String
+    +isActive : Boolean
+    +metadata : Json
+    +createdAt : DateTime
+  }
+
+  class TenantMembership {
+    +membershipId : UUID
+    +tenantId : FK -> Tenant.tenantId
+    +userId : FK -> User.userId
+    +role : Role
+    +permissions : Json
+    +isActive : Boolean
+    +metadata : Json
+    +joinedAt : DateTime
+  }
+
+  note right of TenantMembership
+    Flexible role-based access:
+    - role: OWNER, ADMIN, STAFF, VIEWER
+    - permissions: granular overrides
+    - Can link to Staff entity via metadata
+  end note
+
+  User "1" -- "0..*" TenantMembership
+  Tenant "1" -- "0..*" TenantMembership
+}
+
+' Cross-package relationships
+Tenant "1" -- "0..*" Service
+Tenant "1" -- "0..*" Staff
+Tenant "1" -- "0..*" Customer
+Tenant "1" -- "0..*" Booking
+Tenant "1" -- "0..*" Transaction
+Tenant "1" -- "0..*" Resource
+Tenant "1" -- "0..*" NotificationTemplate
+Tenant "1" -- "0..*" Notification
+
+note top of Tenant
+  **Schema-per-tenant isolation:**
+  - Each tenant: separate PostgreSQL schema
+  - Pattern: tenant_{tenantId}
+  - Central registry table in public schema
+
+  **Scaling strategy:**
+  - Json/metadata fields allow schema-less extension
+  - Add specialized tables only when needed
+  - Event log enables audit and analytics later
+end note
+
+@enduml

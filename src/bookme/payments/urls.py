@@ -1,0 +1,2 @@
+"""Payments URLs."""
+urlpatterns = []

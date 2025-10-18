@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Database
+*.sql
+*.sqlite3
+db.sqlite3
+
+# Media & Static
+media/
+staticfiles/
+
+# Logs
+*.log
+logs/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/_build/
+
+# Temp files
+*.tmp
+*.bak
+*.backup
+
+# Node (if used for frontend)
+node_modules/
+npm-debug.log*
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Docker-specific ignores
+docker-compose.override.yml

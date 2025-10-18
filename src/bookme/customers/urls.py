@@ -1,0 +1,2 @@
+"""Customer URLs."""
+urlpatterns = []

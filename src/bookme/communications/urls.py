@@ -1,0 +1,2 @@
+"""Communications URLs."""
+urlpatterns = []

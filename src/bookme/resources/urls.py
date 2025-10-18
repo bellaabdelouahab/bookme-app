@@ -1,0 +1,2 @@
+"""Resources URLs."""
+urlpatterns = []
