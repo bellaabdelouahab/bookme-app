@@ -30,7 +30,24 @@ SECRET_KEY = env("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEBUG")
 
+# Base domain for tenant subdomains (e.g., "bookme.ma" in production, "localhost" in development)
+TENANT_BASE_DOMAIN = env(
+    "TENANT_BASE_DOMAIN", default=("localhost" if DEBUG else "bookme.ma")
+)
+
+# Whether to auto-create a Domain row for the tenant's primary_domain on tenant creation
+TENANT_AUTO_CREATE_PRIMARY_DOMAIN = env("TENANT_AUTO_CREATE_PRIMARY_DOMAIN", default=True)
+
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+# Ensure localhost access out of the box
+for default_host in ["localhost", "127.0.0.1"]:
+    if default_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(default_host)
+
+# Allow all subdomains of the configured base domain (e.g., *.bookme.ma or *.localhost)
+base_wildcard = f".{TENANT_BASE_DOMAIN}" if not TENANT_BASE_DOMAIN.startswith(".") else TENANT_BASE_DOMAIN
+if base_wildcard not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(base_wildcard)
 
 # Application definition
 SHARED_APPS = [
@@ -71,6 +88,8 @@ INSTALLED_APPS = list(SHARED_APPS) + [
 ]
 
 MIDDLEWARE = [
+    # Allow hosts dynamically from DB Domains and wildcard base domain before tenant routing
+    "bookme.core.middleware.DynamicAllowedHostsMiddleware",
     "django_tenants.middleware.main.TenantMainMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -79,6 +98,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "bookme.core.middleware.TenantAdminAccessMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "bookme.core.middleware.TenantContextMiddleware",

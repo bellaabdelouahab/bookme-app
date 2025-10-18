@@ -1,6 +1,7 @@
 """
 Tenant views for registration and management.
 """
+from django.conf import settings
 from django.db import transaction
 from rest_framework import status
 from rest_framework.response import Response
@@ -34,12 +35,12 @@ class TenantRegistrationView(APIView):
             schema_name=f"tenant_{subdomain}",
             contact_email=tenant_data["contact_email"],
             contact_phone=tenant_data.get("contact_phone", ""),
-            primary_domain=f"{subdomain}.bookme.ma",
+            primary_domain=f"{subdomain}.{getattr(settings, 'TENANT_BASE_DOMAIN', 'localhost')}",
         )
 
         # Create domain
         Domain.objects.create(
-            domain=f"{subdomain}.bookme.ma",
+            domain=f"{subdomain}.{getattr(settings, 'TENANT_BASE_DOMAIN', 'localhost')}",
             tenant=tenant,
             is_primary=True,
         )

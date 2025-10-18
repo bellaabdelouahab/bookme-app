@@ -65,10 +65,11 @@ class Tenant(TenantMixin):
         return self.status == self.TenantStatus.ACTIVE
 
     def save(self, *args, **kwargs):
-        """Override save to ensure schema_name is set."""
-        if not self.schema_name:
-            # Generate schema name from primary domain
-            self.schema_name = f"tenant_{self.pk or 'new'}"
+        """Ensure schema_name present; views/admin should set it explicitly."""
+        if not self.schema_name and self.primary_domain:
+            # Derive from primary_domain if missing (fallback)
+            slug = self.primary_domain.split(".")[0].lower()
+            self.schema_name = f"tenant_{slug}"
         super().save(*args, **kwargs)
 
 

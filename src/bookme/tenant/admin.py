@@ -70,6 +70,25 @@ class TenantAdmin(admin.ModelAdmin):
         ),
     )
 
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(super().get_readonly_fields(request, obj))
+        if not obj:
+            # During add, schema_name is always readonly
+            if "schema_name" not in readonly:
+                readonly.append("schema_name")
+        return readonly
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        # Allow entering either a full domain or just a subdomain; we'll normalize on save via signals
+        if "primary_domain" in form.base_fields:
+            base = getattr(settings, "TENANT_BASE_DOMAIN", "localhost")
+            form.base_fields["primary_domain"].help_text = (
+                "Enter either a full domain (e.g., 'acme.example.com') or just a subdomain "
+                f"(e.g., 'acme') to auto-use '.{base}'. A Domain row will be created automatically."
+            )
+        return form
+
     def open_admin(self, obj):
         """
         Renders a link to open the tenant's Django admin. Assumes tenant admin is at /admin/.

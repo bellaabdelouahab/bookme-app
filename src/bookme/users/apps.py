@@ -6,3 +6,7 @@ class UsersConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "bookme.users"
     verbose_name = "Users & Authentication"
+
+    def ready(self):
+        # Register user signals
+        import bookme.users.signals  # noqa: F401
