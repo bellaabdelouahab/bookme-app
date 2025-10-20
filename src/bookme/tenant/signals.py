@@ -45,8 +45,12 @@ def log_tenant_creation(sender, instance, created, **kwargs):
 def log_tenant_deletion(sender, instance, **kwargs):
     """Log tenant deletion event."""
     TenantLifecycle.objects.create(
-        tenant=instance,
+        tenant=None,  # Avoid FK issues during deletion; keep identifiers in metadata
         event=TenantLifecycle.LifecycleEvent.DELETED,
         performed_by="system",
-        metadata={"schema_name": instance.schema_name},
+        metadata={
+            "tenant_id": getattr(instance, "id", None),
+            "schema_name": instance.schema_name,
+            "primary_domain": getattr(instance, "primary_domain", None),
+        },
     )

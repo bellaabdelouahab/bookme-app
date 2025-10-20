@@ -2,7 +2,7 @@
 
 package "Tenant Core" {
   class Tenant {
-    +tenantId : UUID
+    +tenantId : ID
     +name : String
     +schemaName : String
     +primaryDomain : String
@@ -26,6 +26,22 @@ package "Tenant Core" {
   end note
 
   Tenant "1" -- "0..*" TenantConfig
+
+  class Domain {
+    +domainId : ID
+    +tenantId : FK -> Tenant.tenantId
+    +domain : String
+    +isPrimary : Boolean
+  }
+
+  class TenantLifecycle {
+    +lifecycleId : ID
+    +tenantId : FK? -> Tenant.tenantId
+    +event : LifecycleEvent
+    +performedBy : String
+    +metadata : Json
+    +occurredAt : DateTime
+  }
 }
 
 package "Services & Staff" {
@@ -231,7 +247,7 @@ package "Access Control" {
     +membershipId : UUID
     +tenantId : FK -> Tenant.tenantId
     +userId : FK -> User.userId
-    +role : Role
+    +role : Role  ' OWNER, ADMIN, MANAGER, STAFF, VIEWER
     +permissions : Json
     +isActive : Boolean
     +metadata : Json
@@ -240,8 +256,10 @@ package "Access Control" {
 
   note right of TenantMembership
     Flexible role-based access:
-    - role: OWNER, ADMIN, STAFF, VIEWER
+    - role: OWNER, ADMIN, MANAGER, STAFF, VIEWER
     - permissions: granular overrides
+    - OWNER/ADMIN imply Django is_staff via signal
+    - Middleware requires active membership for /admin
     - Can link to Staff entity via metadata
   end note
 
@@ -258,17 +276,28 @@ Tenant "1" -- "0..*" Transaction
 Tenant "1" -- "0..*" Resource
 Tenant "1" -- "0..*" NotificationTemplate
 Tenant "1" -- "0..*" Notification
+Tenant "1" -- "0..*" Domain
+Tenant "1" -- "0..*" TenantLifecycle
 
 note top of Tenant
   **Schema-per-tenant isolation:**
   - Each tenant: separate PostgreSQL schema
-  - Pattern: tenant_{tenantId}
+  - Pattern: tenant_{subdomain}
   - Central registry table in public schema
 
   **Scaling strategy:**
   - Json/metadata fields allow schema-less extension
   - Add specialized tables only when needed
   - Event log enables audit and analytics later
+
+  **Routing & Hosts:**
+  - Domain rows map hostnames/subdomains to tenants
+  - Base domain configurable, wildcard allowed
+  - Allowed hosts enforced dynamically from Domain table
+
+  **Deletion & Audit:**
+  - Lifecycle logs keep DELETED events with tenantId in metadata
+  - FK to Tenant is nullable to preserve audit after delete
 end note
 
 @enduml

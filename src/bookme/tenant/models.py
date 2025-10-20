@@ -154,7 +154,9 @@ class TenantLifecycle(models.Model):
     id = models.BigAutoField(primary_key=True)
     tenant = models.ForeignKey(
         Tenant,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="lifecycle_events",
     )
     event = models.CharField(max_length=50, choices=LifecycleEvent.choices, db_index=True)
@@ -171,4 +173,10 @@ class TenantLifecycle(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.tenant.name} - {self.event} at {self.occurred_at}"
+        if self.tenant is not None:
+            tenant_label = self.tenant.name
+        else:
+            # Fallback to metadata captured at deletion time
+            md = self.metadata or {}
+            tenant_label = md.get("primary_domain") or md.get("schema_name") or f"tenant:{md.get('tenant_id', '?')}"
+        return f"{tenant_label} - {self.event} at {self.occurred_at}"
