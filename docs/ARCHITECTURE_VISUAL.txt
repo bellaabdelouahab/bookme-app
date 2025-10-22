@@ -1,0 +1,268 @@
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     BOOKME MULTI-TENANT ARCHITECTURE                        │
+│                  (Each App = Separate Folder Structure)                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            FOLDER STRUCTURE                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+src/
+├── base_start/                  👈 TENANT APPS (copied to each tenant schema)
+│   │
+│   ├── bookings/                ✅ SEPARATE APP #1
+│   │   ├── models.py            │  - Booking model (50 lines)
+│   │   ├── admin.py             │  - BookingEvent model (30 lines)
+│   │   ├── serializers.py       │
+│   │   ├── views.py             │
+│   │   ├── urls.py              │
+│   │   ├── managers.py          │
+│   │   └── migrations/          │
+│   │       ├── 0001_initial.py  │
+│   │       └── 0002_add_ref.py  │
+│   │
+│   ├── customers/               ✅ SEPARATE APP #2
+│   │   ├── models.py            │  - Customer model (60 lines)
+│   │   ├── admin.py             │
+│   │   └── migrations/          │
+│   │
+│   ├── staff/                   ✅ SEPARATE APP #3
+│   │   ├── models.py            │  - Staff model (40 lines)
+│   │   ├── admin.py             │  - Availability model (50 lines)
+│   │   └── migrations/          │
+│   │
+│   ├── services/                ✅ SEPARATE APP #4
+│   │   ├── models.py            │  - Service model (45 lines)
+│   │   ├── admin.py             │  - Category model (25 lines)
+│   │   └── migrations/          │
+│   │
+│   ├── payments/                ✅ SEPARATE APP #5
+│   ├── resources/               ✅ SEPARATE APP #6
+│   └── communications/          ✅ SEPARATE APP #7
+│
+└── tenants_core/                👈 SHARED APPS (public schema)
+    ├── core/                    ✅ SEPARATE APP
+    ├── users/                   ✅ SEPARATE APP
+    ├── tenant/                  ✅ SEPARATE APP
+    └── rbac/                    ✅ SEPARATE APP
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    HOW DJANGO DISCOVERS APPS                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+settings/base.py:
+
+TENANT_APPS = [
+    "base_start.bookings",        👈 Points to base_start/bookings/ FOLDER
+    "base_start.customers",       👈 Points to base_start/customers/ FOLDER
+    "base_start.staff",           👈 Points to base_start/staff/ FOLDER
+    "base_start.services",        👈 Points to base_start/services/ FOLDER
+    "base_start.payments",        👈 Points to base_start/payments/ FOLDER
+    "base_start.resources",       👈 Points to base_start/resources/ FOLDER
+    "base_start.communications",  👈 Points to base_start/communications/ FOLDER
+]
+
+Django automatically finds:
+  ✅ models.py in each folder
+  ✅ admin.py in each folder
+  ✅ migrations/ in each folder
+  ✅ All other files
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     WHAT MODULE SYSTEM CONTROLS                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Module system does NOT change folder structure!
+It only controls ACCESS at runtime:
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ Salon Tenant (enabled_modules)                                           │
+├──────────────────────────────────────────────────────────────────────────┤
+│  'bookings': True      ✅ Can access /admin/bookings/                    │
+│  'customers': True     ✅ Can access /admin/customers/                   │
+│  'staff': True         ✅ Can access /admin/staff/                       │
+│  'services': True      ✅ Can access /admin/services/                    │
+│  'payments': True      ✅ Can access /admin/payments/                    │
+│  'resources': True     ✅ Can access /admin/resources/                   │
+│  'communications': True ✅ Can access /admin/communications/             │
+└──────────────────────────────────────────────────────────────────────────┘
+     ↓
+All folders exist, all tables created, all accessible
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ Clinic Tenant (enabled_modules)                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│  'bookings': True      ✅ Can access /admin/bookings/                    │
+│  'customers': True     ✅ Can access /admin/customers/                   │
+│  'staff': True         ✅ Can access /admin/staff/                       │
+│  'services': True      ✅ Can access /admin/services/                    │
+│  'payments': True      ✅ Can access /admin/payments/                    │
+│  'resources': False    ❌ BLOCKED from /admin/resources/                 │
+│  'communications': True ✅ Can access /admin/communications/             │
+└──────────────────────────────────────────────────────────────────────────┘
+     ↓
+Folder still exists, table still exists, but ACCESS BLOCKED by middleware
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        DATABASE SCHEMA LAYOUT                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+PostgreSQL Database:
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ public schema (SHARED DATA)                                             │
+├─────────────────────────────────────────────────────────────────────────┤
+│  users_user                     From: tenants_core/users/models.py      │
+│  users_tenant_membership        From: tenants_core/users/models.py      │
+│  tenant_tenant                  From: tenants_core/tenant/models.py     │
+│  tenant_domain                  From: tenants_core/tenant/models.py     │
+│  rbac_tenant_role               From: tenants_core/rbac/models.py       │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ tenant_salon1 schema (Salon 1 Data)                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│  bookings_booking               From: base_start/bookings/models.py     │
+│  bookings_event                 From: base_start/bookings/models.py     │
+│  customers_customer             From: base_start/customers/models.py    │
+│  staff_staff                    From: base_start/staff/models.py        │
+│  staff_availability             From: base_start/staff/models.py        │
+│  services_service               From: base_start/services/models.py     │
+│  services_category              From: base_start/services/models.py     │
+│  payments_transaction           From: base_start/payments/models.py     │
+│  resources_resource             From: base_start/resources/models.py    │
+│  communications_notification    From: base_start/communications/...     │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ tenant_salon2 schema (Salon 2 Data)                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│  (SAME tables as tenant_salon1)                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ tenant_clinic1 schema (Clinic Data)                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│  (SAME tables as salons, but resources module disabled via middleware)  │
+└─────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      HOW TO ADD NEW FUNCTIONALITY                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Scenario 1: Add model to EXISTING domain
+───────────────────────────────────────────────────────────────────────────────
+Example: Add "Booking Notes" feature
+
+1. Edit existing app's models.py:
+
+   src/base_start/bookings/models.py:
+
+   class Booking(TenantAwareModel):
+       # ... existing ...
+
+   class BookingNote(TenantAwareModel):  👈 ADD HERE (same file)
+       booking = models.ForeignKey(Booking, ...)
+       note = models.TextField()
+
+2. Create migration:
+   python manage.py makemigrations bookings
+   python manage.py migrate_schemas
+
+Done! ✅ No new folders needed
+
+
+Scenario 2: Add NEW business domain
+───────────────────────────────────────────────────────────────────────────────
+Example: Add "Inventory Management" feature
+
+1. Create new app folder:
+   cd src/base_start
+   django-admin startapp inventory
+
+   Creates:
+   base_start/inventory/  👈 NEW FOLDER
+   ├── models.py          👈 InventoryItem, StockLevel models
+   ├── admin.py
+   ├── apps.py
+   └── migrations/
+
+2. Add to settings:
+   TENANT_APPS = [
+       # ... existing ...
+       "base_start.inventory",  👈 ADD
+   ]
+
+3. Add to module registry:
+   AVAILABLE_MODULES = {
+       # ... existing ...
+       'inventory': Module(...),  👈 ADD
+   }
+
+4. Create migrations:
+   python manage.py makemigrations inventory
+   python manage.py migrate_schemas
+
+Done! ✅ New folder for new domain
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            KEY PRINCIPLES                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+✅ Each business domain = Separate app folder
+   - bookings/  (appointments & reservations)
+   - customers/ (customer management)
+   - staff/     (staff & scheduling)
+   - services/  (service catalog)
+   - payments/  (billing & transactions)
+   - resources/ (inventory & equipment)
+
+✅ Each app has its own models.py with 1-5 related models
+   - Keep files small (< 200 lines)
+   - Related models stay together
+   - Easy to find and maintain
+
+✅ Module system = Runtime access control
+   - Doesn't change folder structure
+   - Controls what tenants can access
+   - Middleware blocks disabled modules
+
+✅ All tenants have same schema
+   - Easy to migrate
+   - Easy to upgrade
+   - Consistent behavior
+
+✅ enabled_modules controls visibility
+   - Same tables exist everywhere
+   - Access controlled per tenant
+   - Can enable/disable anytime
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        CURRENT STATUS: PERFECT! ✅                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Your structure is ALREADY correct!
+
+✅ Each app in separate folder
+✅ Small focused models.py files
+✅ Clean separation of concerns
+✅ Django best practices
+✅ Easy to maintain
+
+No changes needed to folder structure!
+
+Module system just adds:
+  - Runtime access control
+  - Per-tenant feature flags
+  - Business type defaults
+
+Keep developing normally! 🚀
+```
