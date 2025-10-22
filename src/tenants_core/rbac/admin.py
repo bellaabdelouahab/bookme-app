@@ -1,13 +1,11 @@
-"""
-Admin interface for RBAC (Role-Based Access Control).
+"""Admin interface for tenant-scoped RBAC."""
 
-Provides tenant-scoped role management in the Django admin.
-"""
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.models import Permission
 from django.db import connection
 from django.utils.html import format_html
+
 from .models import TenantRole
 
 

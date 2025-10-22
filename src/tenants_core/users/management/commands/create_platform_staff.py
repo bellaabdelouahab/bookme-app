@@ -34,9 +34,8 @@ class Command(BaseCommand):
         if password != password_confirm:
             raise CommandError('Passwords do not match')
 
-        # Create user
         if is_superuser:
-            user = User.objects.create_superuser(
+            User.objects.create_superuser(
                 email=email,
                 password=password
             )
@@ -47,7 +46,7 @@ class Command(BaseCommand):
                 self.style.WARNING('  ⚠ This user has FULL platform access!')
             )
         else:
-            user = User.objects.create_user(
+            User.objects.create_user(
                 email=email,
                 password=password,
                 is_staff=True,

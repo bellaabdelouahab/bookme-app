@@ -1,20 +1,19 @@
-"""Custom AdminSite for the public (super admin) domain.
+"""Custom AdminSite for public schema with shared models only."""
 
-This site registers only shared models to avoid querying tenant-only tables
-on the public schema.
-"""
 from django.contrib.admin import AdminSite
+from django.contrib.auth.admin import GroupAdmin
+from django.contrib.auth.models import Group
 
-# Local imports (admin classes then models)
 from tenants_core.tenant.admin import (
     DomainAdmin,
     TenantAdmin,
     TenantConfigAdmin,
     TenantLifecycleAdmin,
 )
-from tenants_core.users.admin import TenantMembershipAdmin, UserAdmin
 from tenants_core.tenant.models import Domain, Tenant, TenantConfig, TenantLifecycle
+from tenants_core.users.admin import TenantMembershipAdmin, UserAdmin
 from tenants_core.users.models import TenantMembership, User
+
 
 class PublicAdminSite(AdminSite):
     site_header = "BookMe Platform Admin"
@@ -22,11 +21,6 @@ class PublicAdminSite(AdminSite):
     index_title = "Platform Administration"
 
     def has_permission(self, request):
-        """
-        Allow access to:
-        1. Superusers (full access to everything)
-        2. Platform staff (access controlled by Django groups/permissions)
-        """
         return bool(
             request.user
             and request.user.is_active
@@ -34,14 +28,12 @@ class PublicAdminSite(AdminSite):
         )
 
 
-# Instantiate a separate AdminSite for the public domain
 public_admin_site = PublicAdminSite(name="public_admin")
 
-
-# Register using the same ModelAdmin classes
 public_admin_site.register(Tenant, TenantAdmin)
 public_admin_site.register(Domain, DomainAdmin)
 public_admin_site.register(TenantConfig, TenantConfigAdmin)
 public_admin_site.register(TenantLifecycle, TenantLifecycleAdmin)
 public_admin_site.register(User, UserAdmin)
 public_admin_site.register(TenantMembership, TenantMembershipAdmin)
+public_admin_site.register(Group, GroupAdmin)
